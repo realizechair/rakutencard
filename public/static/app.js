@@ -171,6 +171,20 @@ function renderJournalTable() {
     `
     tbody.appendChild(row)
   })
+  
+  // 個数を更新
+  updateCounts()
+}
+
+// ルール適用とAI推測の個数を更新
+function updateCounts() {
+  const ruleCount = journalEntries.filter(entry => entry.isRuleApplied).length
+  const aiCount = journalEntries.filter(entry => !entry.isRuleApplied).length
+  const totalCount = journalEntries.length
+  
+  document.getElementById('rule-count').textContent = ruleCount
+  document.getElementById('ai-count').textContent = aiCount
+  document.getElementById('total-count').textContent = totalCount
 }
 
 // 仕訳データ更新

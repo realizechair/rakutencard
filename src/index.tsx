@@ -571,14 +571,19 @@ app.get('/', (c) => {
             
             <!-- マーク凡例 -->
             <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div class="flex items-center space-x-6 text-sm">
-                    <div class="flex items-center">
-                        <i class="fas fa-check-circle text-green-600 mr-2"></i>
-                        <span class="text-gray-700">店舗別ルール適用</span>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-6 text-sm">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                            <span class="text-gray-700">店舗別ルール適用: <span id="rule-count" class="font-bold text-green-600">0</span>件</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-robot text-blue-500 mr-2"></i>
+                            <span class="text-gray-700">AI推測: <span id="ai-count" class="font-bold text-blue-500">0</span>件</span>
+                        </div>
                     </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-robot text-blue-500 mr-2"></i>
-                        <span class="text-gray-700">AI推測</span>
+                    <div class="text-sm text-gray-600">
+                        合計: <span id="total-count" class="font-bold">0</span>件
                     </div>
                 </div>
             </div>
