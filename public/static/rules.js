@@ -188,3 +188,106 @@ async function deleteRule(id) {
     alert('削除に失敗しました')
   }
 }
+
+// ルールをエクスポート（JSON形式）
+function exportRules() {
+  if (rules.length === 0) {
+    alert('エクスポートするルールがありません')
+    return
+  }
+  
+  // エクスポート用のデータを準備（idとuse_countを除外）
+  const exportData = rules.map(rule => ({
+    store_name: rule.store_name,
+    account_subject_code: rule.account_subject_code,
+    description_template: rule.description_template
+  }))
+  
+  // JSONデータを作成
+  const jsonData = JSON.stringify(exportData, null, 2)
+  const blob = new Blob([jsonData], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  
+  // ダウンロードリンクを作成
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `store_rules_${new Date().toISOString().split('T')[0]}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  
+  alert(`${rules.length}件のルールをエクスポートしました`)
+}
+
+// ルールをインポート（JSON形式）
+async function importRules(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  try {
+    const text = await file.text()
+    const importData = JSON.parse(text)
+    
+    // データ検証
+    if (!Array.isArray(importData)) {
+      alert('無効なファイル形式です。JSON配列である必要があります。')
+      return
+    }
+    
+    // 各ルールをチェック
+    for (const rule of importData) {
+      if (!rule.store_name || !rule.account_subject_code) {
+        alert('無効なデータが含まれています。店名パターンと勘定科目コードは必須です。')
+        return
+      }
+    }
+    
+    // 確認ダイアログ
+    const message = `${importData.length}件のルールをインポートします。\n既存の同じ店名パターンのルールは上書きされます。\nよろしいですか？`
+    if (!confirm(message)) {
+      event.target.value = '' // ファイル選択をクリア
+      return
+    }
+    
+    // インポート処理
+    let successCount = 0
+    let errorCount = 0
+    
+    for (const rule of importData) {
+      try {
+        await fetch('/api/learning-rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            store_name: rule.store_name,
+            account_subject_code: rule.account_subject_code,
+            description_template: rule.description_template || ''
+          })
+        })
+        successCount++
+      } catch (error) {
+        console.error('Failed to import rule:', rule, error)
+        errorCount++
+      }
+    }
+    
+    // 結果を表示
+    await loadRules()
+    
+    if (errorCount === 0) {
+      alert(`✅ ${successCount}件のルールを正常にインポートしました！`)
+    } else {
+      alert(`⚠️ インポート完了\n成功: ${successCount}件\nエラー: ${errorCount}件`)
+    }
+    
+    // ファイル選択をクリア
+    event.target.value = ''
+    
+  } catch (error) {
+    console.error('Failed to import rules:', error)
+    alert('インポートに失敗しました。ファイル形式を確認してください。')
+    event.target.value = ''
+  }
+}
+

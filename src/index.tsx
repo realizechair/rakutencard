@@ -406,7 +406,18 @@ app.get('/rules', (c) => {
 
         <!-- ルール一覧 -->
         <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">登録済みルール一覧</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">登録済みルール一覧</h2>
+                <div class="space-x-2">
+                    <button onclick="exportRules()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                        <i class="fas fa-file-export mr-2"></i>エクスポート
+                    </button>
+                    <label class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 cursor-pointer">
+                        <i class="fas fa-file-import mr-2"></i>インポート
+                        <input type="file" id="import-file" accept=".json" class="hidden" onchange="importRules(event)">
+                    </label>
+                </div>
+            </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
