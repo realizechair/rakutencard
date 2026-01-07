@@ -229,29 +229,71 @@ function renderAccountList() {
   const container = document.getElementById('account-list')
   container.innerHTML = ''
   
+  // 借方科目セクション
+  const debitSection = document.createElement('div')
+  debitSection.innerHTML = '<h3 class="font-bold text-gray-700 mb-2">借方科目</h3>'
   debitAccounts.forEach(account => {
     const card = document.createElement('div')
-    card.className = 'p-3 border border-gray-200 rounded-lg flex justify-between items-center'
+    card.className = 'p-3 border border-gray-200 rounded-lg flex justify-between items-center mb-2'
     card.innerHTML = `
       <div>
         <span class="font-medium text-gray-800">${account.name}</span>
         <span class="text-xs text-gray-500 ml-2">(${account.code})</span>
       </div>
-      ${account.is_system ? 
-        '<span class="text-xs text-gray-400">システム</span>' : 
-        `<button onclick="deleteAccount('${account.code}')" class="text-red-600 hover:text-red-800">
-          <i class="fas fa-trash"></i>
-        </button>`
-      }
+      <div class="space-x-2">
+        ${!account.is_system ? 
+          `<button onclick="editAccount('${account.code}')" class="text-blue-600 hover:text-blue-800" title="編集">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button onclick="deleteAccount('${account.code}')" class="text-red-600 hover:text-red-800" title="削除">
+            <i class="fas fa-trash"></i>
+          </button>` : 
+          '<span class="text-xs text-gray-400">システム</span>'
+        }
+      </div>
     `
-    container.appendChild(card)
+    debitSection.appendChild(card)
   })
+  container.appendChild(debitSection)
+  
+  // 貸方科目セクション
+  const creditSection = document.createElement('div')
+  creditSection.innerHTML = '<h3 class="font-bold text-gray-700 mb-2 mt-4">貸方科目</h3>'
+  creditAccounts.forEach(account => {
+    const card = document.createElement('div')
+    card.className = 'p-3 border border-gray-200 rounded-lg flex justify-between items-center mb-2'
+    card.innerHTML = `
+      <div>
+        <span class="font-medium text-gray-800">${account.name}</span>
+        <span class="text-xs text-gray-500 ml-2">(${account.code})</span>
+      </div>
+      <div class="space-x-2">
+        ${!account.is_system ? 
+          `<button onclick="editAccount('${account.code}')" class="text-blue-600 hover:text-blue-800" title="編集">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button onclick="deleteAccount('${account.code}')" class="text-red-600 hover:text-red-800" title="削除">
+            <i class="fas fa-trash"></i>
+          </button>` : 
+          '<span class="text-xs text-gray-400">システム</span>'
+        }
+      </div>
+    `
+    creditSection.appendChild(card)
+  })
+  container.appendChild(creditSection)
 }
 
 // 勘定科目追加モーダル
 function showAccountModal() {
   document.getElementById('account-modal').classList.remove('hidden')
   document.getElementById('account-modal').classList.add('flex')
+  document.getElementById('account-code').disabled = false
+  document.getElementById('account-code').value = ''
+  document.getElementById('account-name').value = ''
+  document.getElementById('account-modal').dataset.mode = 'add'
+  document.getElementById('account-modal-title').textContent = '勘定科目を追加'
+  document.getElementById('account-submit-btn').textContent = '追加'
 }
 
 function closeAccountModal() {
@@ -259,10 +301,28 @@ function closeAccountModal() {
   document.getElementById('account-modal').classList.remove('flex')
 }
 
+function editAccount(code) {
+  const allAccounts = [...debitAccounts, ...creditAccounts]
+  const account = allAccounts.find(a => a.code === code)
+  if (!account || account.is_system) return
+  
+  document.getElementById('account-code').value = account.code
+  document.getElementById('account-code').disabled = true
+  document.getElementById('account-name').value = account.name
+  document.getElementById('account-category').value = account.category
+  document.getElementById('account-modal').dataset.mode = 'edit'
+  document.getElementById('account-modal-title').textContent = '勘定科目を編集'
+  document.getElementById('account-submit-btn').textContent = '更新'
+  
+  document.getElementById('account-modal').classList.remove('hidden')
+  document.getElementById('account-modal').classList.add('flex')
+}
+
 async function addAccountSubject() {
   const code = document.getElementById('account-code').value
   const name = document.getElementById('account-name').value
   const category = document.getElementById('account-category').value
+  const mode = document.getElementById('account-modal').dataset.mode
   
   if (!code || !name) {
     alert('コードと科目名を入力してください')
@@ -270,11 +330,23 @@ async function addAccountSubject() {
   }
   
   try {
-    await fetch('/api/account-subjects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, name, category })
-    })
+    if (mode === 'edit') {
+      // 編集モード
+      await fetch(`/api/account-subjects/${code}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, category })
+      })
+      alert('勘定科目を更新しました')
+    } else {
+      // 追加モード
+      await fetch('/api/account-subjects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, name, category })
+      })
+      alert('勘定科目を追加しました')
+    }
     
     await loadAccountSubjects()
     if (category === '貸方') {
@@ -285,8 +357,8 @@ async function addAccountSubject() {
     document.getElementById('account-code').value = ''
     document.getElementById('account-name').value = ''
   } catch (error) {
-    console.error('Failed to add account:', error)
-    alert('追加に失敗しました')
+    console.error('Failed to save account:', error)
+    alert('保存に失敗しました')
   }
 }
 
