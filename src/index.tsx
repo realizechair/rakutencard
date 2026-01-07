@@ -130,17 +130,33 @@ app.post('/api/parse-csv', async (c) => {
   const { env } = c
   const { csvData, creditAccount } = await c.req.json<{ csvData: string, creditAccount: string }>()
   
-  // CSV解析（シンプルなパーサー）
-  const lines = csvData.trim().split('\n')
-  const headers = lines[0].split(',').map(h => h.replace(/"/g, ''))
+  // CSV解析（改良版パーサー）
+  const lines = csvData.trim().split(/\r?\n/)
+  
+  // ヘッダー行を解析
+  const headerLine = lines[0]
+  const headers = headerLine.split(',').map(h => h.trim())
   
   const rows: RakutenCsvRow[] = []
+  
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.replace(/"/g, ''))
+    const line = lines[i].trim()
+    if (!line) continue // 空行はスキップ
+    
+    // カンマで分割
+    const values = line.split(',')
+    
+    // データ行の検証（利用日が空の行はスキップ）
+    // YYYY/MM/DD または YYYY/M/D 形式をチェック
+    if (!values[0] || !values[0].match(/^\d{4}\/\d{1,2}\/\d{1,2}$/)) {
+      continue
+    }
+    
     const row: any = {}
     headers.forEach((header, index) => {
-      row[header] = values[index] || ''
+      row[header] = values[index] ? values[index].trim() : ''
     })
+    
     rows.push(row as RakutenCsvRow)
   }
   
@@ -153,6 +169,7 @@ app.post('/api/parse-csv', async (c) => {
     const amount = parseInt(row['利用金額'] || '0')
     const userType = row['利用者'] === '家族' ? '家族カード' : '本人カード'
     const date = row['利用日'] || ''
+    const paymentMonth = row['支払月'] || ''
     
     // 1. 学習ルールから検索（部分一致）
     const { results: rules } = await env.DB.prepare(
@@ -189,6 +206,7 @@ app.post('/api/parse-csv', async (c) => {
       amount: amount,
       description: description,
       userType: userType,
+      paymentMonth: paymentMonth,
       storeName: storeName
     })
   }
