@@ -21,6 +21,8 @@ export interface JournalEntry {
   description: string // 摘要
   userType: string // 家族カード or 本人カード
   storeName: string // 元の店名（参照用）
+  paymentMonth?: string // 支払月
+  isRuleApplied?: boolean // 店舗別ルールが適用されたか
 }
 
 // 勘定科目マスタ型

@@ -122,6 +122,12 @@ function renderJournalTable() {
   journalEntries.forEach((entry, index) => {
     const row = document.createElement('tr')
     row.className = 'hover:bg-gray-50'
+    
+    // ルール適用マーク
+    const ruleAppliedIcon = entry.isRuleApplied 
+      ? '<i class="fas fa-check-circle text-green-600 mr-1" title="店舗別ルール適用"></i>' 
+      : '<i class="fas fa-robot text-blue-500 mr-1" title="AI推測"></i>'
+    
     row.innerHTML = `
       <td class="px-4 py-3 text-sm text-gray-700">${entry.no}</td>
       <td class="px-4 py-3 text-sm text-gray-700">
@@ -130,14 +136,17 @@ function renderJournalTable() {
                class="border border-gray-300 rounded px-2 py-1 w-32">
       </td>
       <td class="px-4 py-3 text-sm">
-        <select onchange="updateEntry(${index}, 'debitAccount', this.value)"
-                class="border border-gray-300 rounded px-2 py-1 w-full">
-          ${debitAccounts.map(acc => `
-            <option value="${acc.name}" ${acc.name === entry.debitAccount ? 'selected' : ''}>
-              ${acc.name}
-            </option>
-          `).join('')}
-        </select>
+        <div class="flex items-center">
+          ${ruleAppliedIcon}
+          <select onchange="updateEntry(${index}, 'debitAccount', this.value)"
+                  class="border border-gray-300 rounded px-2 py-1 w-full">
+            ${debitAccounts.map(acc => `
+              <option value="${acc.name}" ${acc.name === entry.debitAccount ? 'selected' : ''}>
+                ${acc.name}
+              </option>
+            `).join('')}
+          </select>
+        </div>
       </td>
       <td class="px-4 py-3 text-sm text-gray-700">${entry.creditAccount}</td>
       <td class="px-4 py-3 text-sm text-gray-700 text-right">
@@ -239,6 +248,7 @@ async function reapplyRules() {
     data.results.forEach((result, index) => {
       journalEntries[index].debitAccount = result.debitAccount
       journalEntries[index].description = result.description
+      journalEntries[index].isRuleApplied = result.isRuleApplied
     })
     
     // プログレスバーを100%に更新

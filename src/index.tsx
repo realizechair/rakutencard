@@ -181,16 +181,19 @@ app.post('/api/parse-csv', async (c) => {
     
     let debitAccount = 'OTHER'
     let description = storeName
+    let isRuleApplied = false
     
     if (rule) {
       // 学習ルールがあればそれを使用
       debitAccount = rule.account_subject_code
       description = rule.description_template || storeName
+      isRuleApplied = true
     } else {
       // 2. AI推測を実行
       const prediction = await predictAccountSubject(storeName, amount, userType)
       debitAccount = prediction.accountCode
       description = prediction.description
+      isRuleApplied = false
     }
     
     // 勘定科目名を取得
@@ -207,7 +210,8 @@ app.post('/api/parse-csv', async (c) => {
       description: description,
       userType: userType,
       paymentMonth: paymentMonth,
-      storeName: storeName
+      storeName: storeName,
+      isRuleApplied: isRuleApplied
     })
   }
   
@@ -240,20 +244,24 @@ app.post('/api/apply-rules-batch', async (c) => {
     
     let debitAccountCode = 'OTHER'
     let description = storeName
+    let isRuleApplied = false
     
     if (rule) {
       debitAccountCode = rule.account_subject_code
       description = rule.description_template || storeName
+      isRuleApplied = true
     } else {
       // AI推測（同期処理）
       const prediction = predictAccountSubject(storeName, amount, userType)
       debitAccountCode = prediction.accountCode
       description = prediction.description
+      isRuleApplied = false
     }
     
     return {
       debitAccount: subjectMap.get(debitAccountCode) || '雑費',
-      description: description
+      description: description,
+      isRuleApplied: isRuleApplied
     }
   })
   
@@ -559,6 +567,20 @@ app.get('/', (c) => {
                     </div>
                 </div>
                 <p id="progress-status" class="text-sm text-gray-600 mt-2 text-center">処理中...</p>
+            </div>
+            
+            <!-- マーク凡例 -->
+            <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div class="flex items-center space-x-6 text-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                        <span class="text-gray-700">店舗別ルール適用</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-robot text-blue-500 mr-2"></i>
+                        <span class="text-gray-700">AI推測</span>
+                    </div>
+                </div>
             </div>
             
             <div class="overflow-x-auto">
