@@ -494,6 +494,16 @@ app.get('/', (c) => {
                 </div>
             </div>
             
+            <!-- プログレスバー -->
+            <div id="progress-container" class="hidden mb-4">
+                <div class="bg-gray-200 rounded-full h-6 overflow-hidden">
+                    <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-300 flex items-center justify-center text-white text-sm font-medium" style="width: 0%">
+                        <span id="progress-text">0%</span>
+                    </div>
+                </div>
+                <p id="progress-status" class="text-sm text-gray-600 mt-2 text-center">処理中...</p>
+            </div>
+            
             <div class="overflow-x-auto">
                 <table id="journal-table" class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">

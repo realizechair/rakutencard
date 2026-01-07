@@ -201,10 +201,25 @@ async function reapplyRules() {
     return
   }
   
+  // プログレスバーを表示
+  const progressContainer = document.getElementById('progress-container')
+  const progressBar = document.getElementById('progress-bar')
+  const progressText = document.getElementById('progress-text')
+  const progressStatus = document.getElementById('progress-status')
+  
+  progressContainer.classList.remove('hidden')
+  
+  const totalEntries = journalEntries.length
   const updatedEntries = []
   
-  for (let i = 0; i < journalEntries.length; i++) {
+  for (let i = 0; i < totalEntries; i++) {
     const entry = journalEntries[i]
+    
+    // プログレスを更新
+    const progress = Math.round(((i + 1) / totalEntries) * 100)
+    progressBar.style.width = `${progress}%`
+    progressText.textContent = `${progress}%`
+    progressStatus.textContent = `処理中... (${i + 1} / ${totalEntries})`
     
     try {
       const response = await fetch('/api/apply-rule', {
@@ -232,6 +247,14 @@ async function reapplyRules() {
   
   journalEntries = updatedEntries
   renderJournalTable()
+  
+  // 完了メッセージ
+  progressStatus.textContent = '✅ 完了しました！'
+  setTimeout(() => {
+    progressContainer.classList.add('hidden')
+    progressBar.style.width = '0%'
+    progressText.textContent = '0%'
+  }, 2000)
   
   alert('最新ルールの適用が完了しました！')
 }
