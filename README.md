@@ -1,132 +1,156 @@
 # クレジットカード仕訳アプリ
 
-## プロジェクト概要
-楽天カード明細CSVファイルから仕訳データを自動生成するWebアプリケーションです。
+## 📋 プロジェクト概要
+- **名称**: クレジットカード仕訳アプリ
+- **目的**: 楽天カードなどのクレジットカード明細CSVから自動で仕訳データを作成し、Excelファイルとして出力
+- **主な機能**:
+  - CSVファイルアップロード
+  - AI推測 + 学習ルールによる勘定科目・摘要の自動設定
+  - 仕訳データの手動編集
+  - 店舗別ルール管理（部分一致検索）
+  - 勘定科目マスタ管理（追加・編集・削除）
+  - Excelファイル出力（.xlsx形式）
 
-### 主な機能
-✅ **CSVアップロード**: 楽天カード明細CSVから自動解析
-✅ **AI推測エンジン**: 店名から勘定科目・摘要を自動推測
-✅ **ハイブリッド学習**: 登録ルール → AI推測 → 手動修正の3段階方式
-✅ **勘定科目マスタ管理**: 追加・編集・削除が可能
-✅ **学習ルール保存**: 修正内容を次回から自動適用
-✅ **Excel出力**: 仕訳データを.xlsx形式でダウンロード
-✅ **カスタマイズ可能**: カードブランド・勘定科目を自由に追加
+## 🌐 アクセスURL
+- **開発環境**: https://3000-ix7kgpilm13yvgeo1a94y-5c13a017.sandbox.novita.ai
+- **メイン画面**: https://3000-ix7kgpilm13yvgeo1a94y-5c13a017.sandbox.novita.ai
+- **店舗別ルール管理**: https://3000-ix7kgpilm13yvgeo1a94y-5c13a017.sandbox.novita.ai/rules
 
-## 🌐 公開URL
-**開発環境**: https://3000-ix7kgpilm13yvgeo1a94y-5c13a017.sandbox.novita.ai
+## 💾 データ構造
 
-## 📊 出力される仕訳データ
-| No | 日付 | 借方勘定科目 | 貸方勘定科目 | 金額 | 摘要 | 区分 |
-|----|------|-------------|-------------|------|------|------|
-| 1 | 2025/10/31 | 消耗品費 | 楽天カード | 1787 | マツキヨキーノ和歌山店 消耗品購入 | 家族カード |
+### データベーステーブル（Cloudflare D1）
 
-## 🗄️ データアーキテクチャ
-### データモデル
-- **account_subjects**: 勘定科目マスタ（借方・貸方）
-- **learning_rules**: 店名 → 勘定科目・摘要のマッピング
-
-### ストレージサービス
-- **Cloudflare D1**: SQLiteベースの分散データベース
-  - 勘定科目マスタ
-  - 学習ルール
-
-### データフロー
-```
-CSV Upload → 行解析 → 学習ルール検索 → AI推測 → 仕訳テーブル表示
-                                    ↓
-                            手動修正 → 学習ルール保存
+#### 1. 勘定科目マスタ（account_subjects）
+```sql
+- id: INTEGER PRIMARY KEY
+- code: TEXT UNIQUE NOT NULL          -- 科目コード（例: CONSUMABLES）
+- name: TEXT NOT NULL                 -- 科目名（例: 消耗品費）
+- category: TEXT NOT NULL             -- 分類（借方 or 貸方）
+- is_system: INTEGER DEFAULT 0        -- システム初期データフラグ（1=システム、0=ユーザー追加）
+- created_at: DATETIME
 ```
 
-## 🚀 使い方
+**初期借方科目**:
+- 消耗品費、旅費交通費、会議費、通信費、水道光熱費、地代家賃、福利厚生費、交際費、広告宣伝費、新聞図書費、修繕費、食費、医療費、雑費
+
+**初期貸方科目**:
+- 楽天カード、JCBカード、VISAカード、Mastercardカード、AMEXカード
+
+#### 2. 学習ルール（learning_rules）
+```sql
+- id: INTEGER PRIMARY KEY
+- store_name: TEXT NOT NULL           -- 店名パターン（部分一致で検索）
+- account_subject_code: TEXT NOT NULL -- 勘定科目コード
+- description_template: TEXT          -- 摘要テンプレート
+- use_count: INTEGER DEFAULT 0        -- 使用回数
+- created_at: DATETIME
+- updated_at: DATETIME
+```
+
+### 仕訳データ構造（出力形式）
+```typescript
+{
+  no: number                  // 連番
+  date: string                // 日付（YYYY/MM/DD）
+  debitAccount: string        // 借方勘定科目名
+  creditAccount: string       // 貸方勘定科目名（カードブランド）
+  amount: number              // 金額
+  description: string         // 摘要
+  userType: string            // 区分（家族カード or 本人カード）
+}
+```
+
+## 📖 使い方
 
 ### 1. カードブランドを選択
-起動画面で使用するクレジットカード（楽天カード、JCBカード等）を選択します。
+- メイン画面で使用したカードブランド（楽天カード、JCB等）を選択
 
 ### 2. CSVファイルをアップロード
-楽天カードからダウンロードしたCSVファイルをドラッグ&ドロップまたはクリックでアップロードします。
+- 楽天カードの明細CSVファイルをアップロード
+- 自動的に解析し、仕訳データを生成
 
-### 3. 仕訳データを確認・編集
-- 自動推測された勘定科目と摘要を確認
-- 必要に応じて各行を手動で修正
-- 保存アイコン（💾）をクリックして学習ルールに追加
+### 3. 仕訳データの確認・編集
+- 自動生成された仕訳データを確認
+- 必要に応じて手動で修正（日付、借方科目、金額、摘要）
+- 修正内容を学習ルールとして保存（次回から自動適用）
 
-### 4. Excelで出力
-「Excelで出力」ボタンをクリックして、仕訳データを.xlsx形式でダウンロードします。
+### 4. 店舗別ルールの管理
+- 「店舗別ルール管理」画面で店名パターンを登録
+- パターン例: 「Amazon」→「消耗品費」+「Amazon購入」
+- 部分一致で検索されるため、「Amazon.co.jp」「Amazonマーケットプレイス」両方に対応
 
-## 🎯 AI推測ルール
-以下のパターンで自動推測を実行：
+### 5. 勘定科目の管理
+- メイン画面の「勘定科目管理」セクションで追加・編集・削除
+- システム初期科目は編集・削除不可
 
-- **マツキヨ、ツルハ、薬** → 消耗品費
-- **イオン、ロックスター、ローソン、セブン** → 食費
-- **駅、鉄道、バス、タクシー** → 旅費交通費
-- **スタバ、カフェ、喫茶、レストラン** → 会議費
-- **書店、ブックス** → 新聞図書費
-- **携帯、ドコモ、au、ソフトバンク** → 通信費
-- **病院、クリニック、医院、内科** → 医療費
+### 6. Excelファイル出力
+- 「Excelで出力」ボタンをクリック
+- `仕訳データ_YYYY-MM-DD.xlsx` 形式でダウンロード
 
-## 📂 プロジェクト構造
-```
-webapp/
-├── src/
-│   ├── index.tsx          # Honoバックエンド + HTML
-│   └── types.ts           # TypeScript型定義
-├── public/static/
-│   └── app.js             # フロントエンドJavaScript
-├── migrations/
-│   └── 0001_initial_schema.sql  # D1マイグレーション
-├── ecosystem.config.cjs   # PM2設定
-├── wrangler.jsonc         # Cloudflare設定
-└── package.json
-```
-
-## 🔧 デプロイ状況
-- **プラットフォーム**: Cloudflare Pages
+## 🚀 デプロイ情報
+- **プラットフォーム**: Cloudflare Pages + Workers
+- **データベース**: Cloudflare D1（SQLite）
+- **技術スタック**: 
+  - バックエンド: Hono（TypeScript）
+  - フロントエンド: TailwindCSS + Vanilla JavaScript
+  - ライブラリ: SheetJS (XLSX)、Font Awesome
 - **ステータス**: ✅ 開発環境で稼働中
-- **テックスタック**: Hono + TypeScript + TailwindCSS + Cloudflare D1
-- **最終更新**: 2026-01-07
+
+## ✅ 実装済み機能
+1. ✅ CSVファイルアップロード・解析
+2. ✅ AI推測エンジン（店名から勘定科目・摘要を推測）
+3. ✅ 学習ルール（部分一致検索）
+4. ✅ 仕訳データ編集UI（表形式、手動修正可能）
+5. ✅ 店舗別ルール管理画面（追加・編集・削除）
+6. ✅ 勘定科目マスタ管理（追加・編集・削除）
+7. ✅ Excelファイル出力（.xlsx形式）
+8. ✅ 楽天カードCSV形式対応（Shift_JIS）
+
+## 🔄 今後の改善案
+1. 複数カード会社のCSV形式に対応
+2. 仕訳データの一括編集機能
+3. 学習ルールのインポート・エクスポート
+4. 仕訳データの履歴管理
+5. 月次・年次レポート機能
+6. AI推測精度の向上（より多くのパターン対応）
 
 ## 🛠️ ローカル開発
 
-### 必須環境
-- Node.js 18+
-- npm
+### 前提条件
+- Node.js 18以上
+- npm または yarn
 
 ### セットアップ
 ```bash
-# 依存関係インストール
+# 依存関係のインストール
 npm install
 
-# D1ローカルマイグレーション
+# データベースマイグレーション
 npm run db:migrate:local
 
-# ビルド
+# 開発サーバー起動（PM2使用）
 npm run build
+pm2 start ecosystem.config.cjs
 
-# 開発サーバー起動
-npm run dev:sandbox
+# サービス確認
+curl http://localhost:3000
 ```
 
-### 利用可能なコマンド
+### 利用可能なスクリプト
 ```bash
-npm run build              # プロジェクトビルド
-npm run dev:sandbox        # 開発サーバー起動（D1 local）
-npm run db:migrate:local   # ローカルD1マイグレーション
-npm run db:console:local   # ローカルD1コンソール
-npm run clean-port         # ポート3000をクリーンアップ
+npm run dev              # Vite開発サーバー
+npm run dev:sandbox      # Wranglerローカルサーバー
+npm run build            # プロダクションビルド
+npm run preview          # ビルド結果のプレビュー
+npm run deploy           # Cloudflare Pagesにデプロイ
+npm run db:migrate:local # ローカルD1マイグレーション
+npm run db:migrate:prod  # 本番D1マイグレーション
+npm run clean-port       # ポート3000をクリーンアップ
 ```
 
-## 📝 今後の開発予定
-- [ ] 複数CSVファイルの一括アップロード
-- [ ] 仕訳データの編集履歴表示
-- [ ] PDF出力機能
-- [ ] カスタムルールのインポート/エクスポート
-- [ ] AI推測精度の向上（外部AI API統合）
-- [ ] 他のカード会社CSVフォーマットへの対応
-
-## 📄 ライセンス
-MIT License
-
----
-
-**開発者**: Claude Code Agent  
-**作成日**: 2026-01-07
+## 📝 更新履歴
+- **2026-01-07**: 初回リリース
+  - 基本機能実装
+  - 店舗別ルール管理画面追加
+  - 勘定科目編集機能追加
+  - 部分一致検索実装
