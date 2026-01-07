@@ -1,21 +1,132 @@
-```txt
+# クレジットカード仕訳アプリ
+
+## プロジェクト概要
+楽天カード明細CSVファイルから仕訳データを自動生成するWebアプリケーションです。
+
+### 主な機能
+✅ **CSVアップロード**: 楽天カード明細CSVから自動解析
+✅ **AI推測エンジン**: 店名から勘定科目・摘要を自動推測
+✅ **ハイブリッド学習**: 登録ルール → AI推測 → 手動修正の3段階方式
+✅ **勘定科目マスタ管理**: 追加・編集・削除が可能
+✅ **学習ルール保存**: 修正内容を次回から自動適用
+✅ **Excel出力**: 仕訳データを.xlsx形式でダウンロード
+✅ **カスタマイズ可能**: カードブランド・勘定科目を自由に追加
+
+## 🌐 公開URL
+**開発環境**: https://3000-ix7kgpilm13yvgeo1a94y-5c13a017.sandbox.novita.ai
+
+## 📊 出力される仕訳データ
+| No | 日付 | 借方勘定科目 | 貸方勘定科目 | 金額 | 摘要 | 区分 |
+|----|------|-------------|-------------|------|------|------|
+| 1 | 2025/10/31 | 消耗品費 | 楽天カード | 1787 | マツキヨキーノ和歌山店 消耗品購入 | 家族カード |
+
+## 🗄️ データアーキテクチャ
+### データモデル
+- **account_subjects**: 勘定科目マスタ（借方・貸方）
+- **learning_rules**: 店名 → 勘定科目・摘要のマッピング
+
+### ストレージサービス
+- **Cloudflare D1**: SQLiteベースの分散データベース
+  - 勘定科目マスタ
+  - 学習ルール
+
+### データフロー
+```
+CSV Upload → 行解析 → 学習ルール検索 → AI推測 → 仕訳テーブル表示
+                                    ↓
+                            手動修正 → 学習ルール保存
+```
+
+## 🚀 使い方
+
+### 1. カードブランドを選択
+起動画面で使用するクレジットカード（楽天カード、JCBカード等）を選択します。
+
+### 2. CSVファイルをアップロード
+楽天カードからダウンロードしたCSVファイルをドラッグ&ドロップまたはクリックでアップロードします。
+
+### 3. 仕訳データを確認・編集
+- 自動推測された勘定科目と摘要を確認
+- 必要に応じて各行を手動で修正
+- 保存アイコン（💾）をクリックして学習ルールに追加
+
+### 4. Excelで出力
+「Excelで出力」ボタンをクリックして、仕訳データを.xlsx形式でダウンロードします。
+
+## 🎯 AI推測ルール
+以下のパターンで自動推測を実行：
+
+- **マツキヨ、ツルハ、薬** → 消耗品費
+- **イオン、ロックスター、ローソン、セブン** → 食費
+- **駅、鉄道、バス、タクシー** → 旅費交通費
+- **スタバ、カフェ、喫茶、レストラン** → 会議費
+- **書店、ブックス** → 新聞図書費
+- **携帯、ドコモ、au、ソフトバンク** → 通信費
+- **病院、クリニック、医院、内科** → 医療費
+
+## 📂 プロジェクト構造
+```
+webapp/
+├── src/
+│   ├── index.tsx          # Honoバックエンド + HTML
+│   └── types.ts           # TypeScript型定義
+├── public/static/
+│   └── app.js             # フロントエンドJavaScript
+├── migrations/
+│   └── 0001_initial_schema.sql  # D1マイグレーション
+├── ecosystem.config.cjs   # PM2設定
+├── wrangler.jsonc         # Cloudflare設定
+└── package.json
+```
+
+## 🔧 デプロイ状況
+- **プラットフォーム**: Cloudflare Pages
+- **ステータス**: ✅ 開発環境で稼働中
+- **テックスタック**: Hono + TypeScript + TailwindCSS + Cloudflare D1
+- **最終更新**: 2026-01-07
+
+## 🛠️ ローカル開発
+
+### 必須環境
+- Node.js 18+
+- npm
+
+### セットアップ
+```bash
+# 依存関係インストール
 npm install
-npm run dev
+
+# D1ローカルマイグレーション
+npm run db:migrate:local
+
+# ビルド
+npm run build
+
+# 開発サーバー起動
+npm run dev:sandbox
 ```
 
-```txt
-npm run deploy
+### 利用可能なコマンド
+```bash
+npm run build              # プロジェクトビルド
+npm run dev:sandbox        # 開発サーバー起動（D1 local）
+npm run db:migrate:local   # ローカルD1マイグレーション
+npm run db:console:local   # ローカルD1コンソール
+npm run clean-port         # ポート3000をクリーンアップ
 ```
 
-[For generating/synchronizing types based on your Worker configuration run](https://developers.cloudflare.com/workers/wrangler/commands/#types):
+## 📝 今後の開発予定
+- [ ] 複数CSVファイルの一括アップロード
+- [ ] 仕訳データの編集履歴表示
+- [ ] PDF出力機能
+- [ ] カスタムルールのインポート/エクスポート
+- [ ] AI推測精度の向上（外部AI API統合）
+- [ ] 他のカード会社CSVフォーマットへの対応
 
-```txt
-npm run cf-typegen
-```
+## 📄 ライセンス
+MIT License
 
-Pass the `CloudflareBindings` as generics when instantiation `Hono`:
+---
 
-```ts
-// src/index.ts
-const app = new Hono<{ Bindings: CloudflareBindings }>()
-```
+**開発者**: Claude Code Agent  
+**作成日**: 2026-01-07
