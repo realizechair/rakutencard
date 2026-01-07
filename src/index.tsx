@@ -214,6 +214,52 @@ app.post('/api/parse-csv', async (c) => {
   return c.json({ entries })
 })
 
+// バッチ処理：複数仕訳に対するルール適用
+app.post('/api/apply-rules-batch', async (c) => {
+  const { env } = c
+  const { entries } = await c.req.json<{ entries: Array<{ storeName: string, amount: number, userType: string }> }>()
+  
+  // 1. 全学習ルールを一度に取得
+  const { results: rules } = await env.DB.prepare(
+    'SELECT * FROM learning_rules'
+  ).all<LearningRule>()
+  
+  // 2. 全勘定科目を一度に取得
+  const { results: subjects } = await env.DB.prepare(
+    'SELECT code, name FROM account_subjects'
+  ).all<{ code: string, name: string }>()
+  
+  const subjectMap = new Map(subjects.map(s => [s.code, s.name]))
+  
+  // 3. 各エントリーに対してルールを適用
+  const results = entries.map(entry => {
+    const { storeName, amount, userType } = entry
+    
+    // 部分一致でルールを検索
+    const rule = rules.find(r => storeName.includes(r.store_name))
+    
+    let debitAccountCode = 'OTHER'
+    let description = storeName
+    
+    if (rule) {
+      debitAccountCode = rule.account_subject_code
+      description = rule.description_template || storeName
+    } else {
+      // AI推測（同期処理）
+      const prediction = predictAccountSubject(storeName, amount, userType)
+      debitAccountCode = prediction.accountCode
+      description = prediction.description
+    }
+    
+    return {
+      debitAccount: subjectMap.get(debitAccountCode) || '雑費',
+      description: description
+    }
+  })
+  
+  return c.json({ results })
+})
+
 // 単一店名に対するルール適用（既存仕訳の更新用）
 app.post('/api/apply-rule', async (c) => {
   const { env } = c

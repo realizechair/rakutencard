@@ -208,55 +208,64 @@ async function reapplyRules() {
   const progressStatus = document.getElementById('progress-status')
   
   progressContainer.classList.remove('hidden')
+  progressStatus.textContent = '処理中... バッチ処理を実行しています'
   
-  const totalEntries = journalEntries.length
-  const updatedEntries = []
-  
-  for (let i = 0; i < totalEntries; i++) {
-    const entry = journalEntries[i]
+  try {
+    // 全エントリーを一度に送信してバッチ処理
+    const entries = journalEntries.map(entry => ({
+      storeName: entry.storeName,
+      amount: entry.amount,
+      userType: entry.userType
+    }))
     
-    // プログレスを更新
-    const progress = Math.round(((i + 1) / totalEntries) * 100)
-    progressBar.style.width = `${progress}%`
-    progressText.textContent = `${progress}%`
-    progressStatus.textContent = `処理中... (${i + 1} / ${totalEntries})`
+    // プログレスバーを50%に更新
+    progressBar.style.width = '50%'
+    progressText.textContent = '50%'
     
-    try {
-      const response = await fetch('/api/apply-rule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeName: entry.storeName,
-          amount: entry.amount,
-          userType: entry.userType
-        })
-      })
-      
-      const data = await response.json()
-      
-      // 更新された科目と摘要を反映
-      entry.debitAccount = data.debitAccount
-      entry.description = data.description
-      
-      updatedEntries.push(entry)
-    } catch (error) {
-      console.error(`Failed to apply rule for entry ${i}:`, error)
-      updatedEntries.push(entry)
-    }
+    const response = await fetch('/api/apply-rules-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entries })
+    })
+    
+    const data = await response.json()
+    
+    // プログレスバーを75%に更新
+    progressBar.style.width = '75%'
+    progressText.textContent = '75%'
+    progressStatus.textContent = '処理中... データを更新しています'
+    
+    // 結果を各エントリーに反映
+    data.results.forEach((result, index) => {
+      journalEntries[index].debitAccount = result.debitAccount
+      journalEntries[index].description = result.description
+    })
+    
+    // プログレスバーを100%に更新
+    progressBar.style.width = '100%'
+    progressText.textContent = '100%'
+    
+    renderJournalTable()
+    
+    // 完了メッセージ
+    progressStatus.textContent = '✅ 完了しました！'
+    setTimeout(() => {
+      progressContainer.classList.add('hidden')
+      progressBar.style.width = '0%'
+      progressText.textContent = '0%'
+    }, 2000)
+    
+    alert('最新ルールの適用が完了しました！')
+  } catch (error) {
+    console.error('Failed to apply rules:', error)
+    progressStatus.textContent = '❌ エラーが発生しました'
+    setTimeout(() => {
+      progressContainer.classList.add('hidden')
+      progressBar.style.width = '0%'
+      progressText.textContent = '0%'
+    }, 3000)
+    alert('ルール適用に失敗しました。もう一度お試しください。')
   }
-  
-  journalEntries = updatedEntries
-  renderJournalTable()
-  
-  // 完了メッセージ
-  progressStatus.textContent = '✅ 完了しました！'
-  setTimeout(() => {
-    progressContainer.classList.add('hidden')
-    progressBar.style.width = '0%'
-    progressText.textContent = '0%'
-  }, 2000)
-  
-  alert('最新ルールの適用が完了しました！')
 }
 
 // Excelエクスポート
