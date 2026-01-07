@@ -239,17 +239,15 @@ function renderAccountList() {
       <div>
         <span class="font-medium text-gray-800">${account.name}</span>
         <span class="text-xs text-gray-500 ml-2">(${account.code})</span>
+        ${account.is_system ? '<span class="text-xs text-blue-500 ml-2">システム</span>' : ''}
       </div>
       <div class="space-x-2">
-        ${!account.is_system ? 
-          `<button onclick="editAccount('${account.code}')" class="text-blue-600 hover:text-blue-800" title="編集">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button onclick="deleteAccount('${account.code}')" class="text-red-600 hover:text-red-800" title="削除">
-            <i class="fas fa-trash"></i>
-          </button>` : 
-          '<span class="text-xs text-gray-400">システム</span>'
-        }
+        <button onclick="editAccount('${account.code}')" class="text-blue-600 hover:text-blue-800" title="編集">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="deleteAccount('${account.code}')" class="text-red-600 hover:text-red-800" title="削除">
+          <i class="fas fa-trash"></i>
+        </button>
       </div>
     `
     debitSection.appendChild(card)
@@ -266,17 +264,15 @@ function renderAccountList() {
       <div>
         <span class="font-medium text-gray-800">${account.name}</span>
         <span class="text-xs text-gray-500 ml-2">(${account.code})</span>
+        ${account.is_system ? '<span class="text-xs text-blue-500 ml-2">システム</span>' : ''}
       </div>
       <div class="space-x-2">
-        ${!account.is_system ? 
-          `<button onclick="editAccount('${account.code}')" class="text-blue-600 hover:text-blue-800" title="編集">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button onclick="deleteAccount('${account.code}')" class="text-red-600 hover:text-red-800" title="削除">
-            <i class="fas fa-trash"></i>
-          </button>` : 
-          '<span class="text-xs text-gray-400">システム</span>'
-        }
+        <button onclick="editAccount('${account.code}')" class="text-blue-600 hover:text-blue-800" title="編集">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button onclick="deleteAccount('${account.code}')" class="text-red-600 hover:text-red-800" title="削除">
+          <i class="fas fa-trash"></i>
+        </button>
       </div>
     `
     creditSection.appendChild(card)
@@ -304,7 +300,7 @@ function closeAccountModal() {
 function editAccount(code) {
   const allAccounts = [...debitAccounts, ...creditAccounts]
   const account = allAccounts.find(a => a.code === code)
-  if (!account || account.is_system) return
+  if (!account) return
   
   document.getElementById('account-code').value = account.code
   document.getElementById('account-code').disabled = true

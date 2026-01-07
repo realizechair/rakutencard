@@ -44,13 +44,13 @@ app.post('/api/account-subjects', async (c) => {
   return c.json({ success: true })
 })
 
-// 勘定科目削除（システムデータ以外）
+// 勘定科目削除（すべて削除可能）
 app.delete('/api/account-subjects/:code', async (c) => {
   const { env } = c
   const code = c.req.param('code')
   
   await env.DB.prepare(
-    'DELETE FROM account_subjects WHERE code = ? AND is_system = 0'
+    'DELETE FROM account_subjects WHERE code = ?'
   ).bind(code).run()
   
   return c.json({ success: true })
@@ -112,14 +112,14 @@ app.delete('/api/learning-rules/:id', async (c) => {
   return c.json({ success: true })
 })
 
-// 勘定科目更新
+// 勘定科目更新（すべて更新可能）
 app.put('/api/account-subjects/:code', async (c) => {
   const { env } = c
   const code = c.req.param('code')
   const { name, category } = await c.req.json<AccountSubject>()
   
   await env.DB.prepare(
-    'UPDATE account_subjects SET name = ?, category = ? WHERE code = ? AND is_system = 0'
+    'UPDATE account_subjects SET name = ?, category = ? WHERE code = ?'
   ).bind(name, category, code).run()
   
   return c.json({ success: true })
