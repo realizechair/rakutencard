@@ -196,6 +196,44 @@ app.post('/api/parse-csv', async (c) => {
   return c.json({ entries })
 })
 
+// 単一店名に対するルール適用（既存仕訳の更新用）
+app.post('/api/apply-rule', async (c) => {
+  const { env } = c
+  const { storeName, amount, userType } = await c.req.json<{ storeName: string, amount: number, userType: string }>()
+  
+  // 1. 学習ルールから検索（部分一致）
+  const { results: rules } = await env.DB.prepare(
+    'SELECT * FROM learning_rules'
+  ).all<LearningRule>()
+  
+  // 部分一致でルールを検索
+  const rule = rules.find(r => storeName.includes(r.store_name))
+  
+  let debitAccountCode = 'OTHER'
+  let description = storeName
+  
+  if (rule) {
+    // 学習ルールがあればそれを使用
+    debitAccountCode = rule.account_subject_code
+    description = rule.description_template || storeName
+  } else {
+    // 2. AI推測を実行
+    const prediction = await predictAccountSubject(storeName, amount, userType)
+    debitAccountCode = prediction.accountCode
+    description = prediction.description
+  }
+  
+  // 勘定科目名を取得
+  const subject = await env.DB.prepare(
+    'SELECT name FROM account_subjects WHERE code = ?'
+  ).bind(debitAccountCode).first<{ name: string }>()
+  
+  return c.json({
+    debitAccount: subject?.name || '雑費',
+    description: description
+  })
+})
+
 // AI推測関数（シンプルなルールベース推測）
 function predictAccountSubject(storeName: string, amount: number, userType: string): { accountCode: string, description: string } {
   const name = storeName.toLowerCase()
@@ -428,9 +466,14 @@ app.get('/', (c) => {
                     <span class="bg-blue-600 text-white rounded-full w-8 h-8 inline-flex items-center justify-center mr-2">3</span>
                     仕訳データ編集
                 </h2>
-                <button onclick="exportToExcel()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
-                    <i class="fas fa-file-excel mr-2"></i>Excelで出力
-                </button>
+                <div class="space-x-2">
+                    <button onclick="reapplyRules()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-sync-alt mr-2"></i>最新ルールで更新
+                    </button>
+                    <button onclick="exportToExcel()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
+                        <i class="fas fa-file-excel mr-2"></i>Excelで出力
+                    </button>
+                </div>
             </div>
             
             <div class="overflow-x-auto">

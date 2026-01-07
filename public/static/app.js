@@ -194,6 +194,47 @@ async function saveRule(index) {
   }
 }
 
+// 最新ルールで仕訳データを更新
+async function reapplyRules() {
+  if (!confirm('最新の店舗別ルールを適用して、すべての仕訳データを更新しますか？\n※手動で編集した内容は上書きされます。')) {
+    return
+  }
+  
+  const updatedEntries = []
+  
+  for (let i = 0; i < journalEntries.length; i++) {
+    const entry = journalEntries[i]
+    
+    try {
+      const response = await fetch('/api/apply-rule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeName: entry.storeName,
+          amount: entry.amount,
+          userType: entry.userType
+        })
+      })
+      
+      const data = await response.json()
+      
+      // 更新された科目と摘要を反映
+      entry.debitAccount = data.debitAccount
+      entry.description = data.description
+      
+      updatedEntries.push(entry)
+    } catch (error) {
+      console.error(`Failed to apply rule for entry ${i}:`, error)
+      updatedEntries.push(entry)
+    }
+  }
+  
+  journalEntries = updatedEntries
+  renderJournalTable()
+  
+  alert('最新ルールの適用が完了しました！')
+}
+
 // Excelエクスポート
 function exportToExcel() {
   const data = journalEntries.map(entry => ({
@@ -345,9 +386,7 @@ async function addAccountSubject() {
     }
     
     await loadAccountSubjects()
-    if (category === '貸方') {
-      await loadCardBrands()
-    }
+    await loadCardBrands() // 常にカードブランドをリロード
     closeAccountModal()
     
     document.getElementById('account-code').value = ''
@@ -367,7 +406,8 @@ async function deleteAccount(code) {
     })
     
     await loadAccountSubjects()
-    await loadCardBrands()
+    await loadCardBrands() // 常にカードブランドをリロード
+    alert('勘定科目を削除しました')
   } catch (error) {
     console.error('Failed to delete account:', error)
     alert('削除に失敗しました')
