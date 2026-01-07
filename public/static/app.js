@@ -238,6 +238,21 @@ async function reapplyRules() {
 
 // Excelエクスポート
 function exportToExcel() {
+  // 支払月を日付形式に変換する関数
+  function convertPaymentMonthToDate(paymentMonth) {
+    if (!paymentMonth) return ''
+    
+    // "2024年1月" -> "2024/1/1" に変換
+    const match = paymentMonth.match(/(\d{4})年(\d{1,2})月/)
+    if (match) {
+      const year = match[1]
+      const month = match[2]
+      return `${year}/${month}/1`
+    }
+    
+    return paymentMonth // 変換できない場合はそのまま
+  }
+  
   const data = journalEntries.map(entry => ({
     'No': entry.no,
     '日付': entry.date,
@@ -245,7 +260,8 @@ function exportToExcel() {
     '貸方勘定科目': entry.creditAccount,
     '金額': entry.amount,
     '摘要': entry.description,
-    '区分': entry.userType
+    '区分': entry.userType,
+    '支払月': convertPaymentMonthToDate(entry.paymentMonth)
   }))
   
   const wb = XLSX.utils.book_new()
@@ -259,7 +275,8 @@ function exportToExcel() {
     { wch: 20 }, // 貸方
     { wch: 12 }, // 金額
     { wch: 30 }, // 摘要
-    { wch: 15 }  // 区分
+    { wch: 15 }, // 区分
+    { wch: 12 }  // 支払月
   ]
   
   XLSX.utils.book_append_sheet(wb, ws, '仕訳データ')
