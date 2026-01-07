@@ -151,6 +151,7 @@ function renderJournalTable() {
                class="border border-gray-300 rounded px-2 py-1 w-full">
       </td>
       <td class="px-4 py-3 text-sm text-gray-700">${entry.userType}</td>
+      <td class="px-4 py-3 text-sm text-gray-700">${entry.paymentMonth || '-'}</td>
       <td class="px-4 py-3 text-sm">
         <button onclick="saveRule(${index})" 
                 class="text-blue-600 hover:text-blue-800" 
